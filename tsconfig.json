@@ -1,5 +1,6 @@
 {
   "extends": "astro/tsconfigs/strict",
+<<<<<<< HEAD
   "include": [
     ".astro/types.d.ts",
     "**/*"
@@ -11,3 +12,8 @@
     "jsx": "preserve"
   }
 }
+=======
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"]
+}
+>>>>>>> 8f93b77 (Initial commit from Astro)
