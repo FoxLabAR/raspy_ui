@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Antigravity 🚀
 
 Bienvenido al repositorio oficial del **Ecosistema Antigravity**. Este proyecto integra control de hardware IoT, inteligencia artificial y una interfaz web moderna para crear asistentes y sistemas de automatización avanzados.
@@ -95,3 +96,48 @@ El sistema utiliza una arquitectura híbrida moderna:
 
 ---
 *Copyright (c) 2026 FoxLab. Distribuido bajo la licencia MIT.*
+=======
+# Astro Starter Kit: Minimal
+
+```sh
+npm create astro@latest -- --template minimal
+```
+
+> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+
+## 🚀 Project Structure
+
+Inside of your Astro project, you'll see the following folders and files:
+
+```text
+/
+├── public/
+├── src/
+│   └── pages/
+│       └── index.astro
+└── package.json
+```
+
+Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+
+There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+
+Any static assets, like images, can be placed in the `public/` directory.
+
+## 🧞 Commands
+
+All commands are run from the root of the project, from a terminal:
+
+| Command                   | Action                                           |
+| :------------------------ | :----------------------------------------------- |
+| `npm install`             | Installs dependencies                            |
+| `npm run dev`             | Starts local dev server at `localhost:4321`      |
+| `npm run build`           | Build your production site to `./dist/`          |
+| `npm run preview`         | Preview your build locally, before deploying     |
+| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
+| `npm run astro -- --help` | Get help using the Astro CLI                     |
+
+## 👀 Want to learn more?
+
+Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+>>>>>>> 8f93b77 (Initial commit from Astro)

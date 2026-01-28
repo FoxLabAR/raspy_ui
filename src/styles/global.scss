@@ -1,0 +1,78 @@
+:root {
+  --bg-app: #050505;
+  --bg-panel: #111111;
+  --bg-terminal: #0a0a0a;
+  
+  --text-main: #e0e0e0;
+  --text-muted: #888888;
+  --text-highlight: #ffffff;
+  
+  --accent-cyan: #00f3ff;
+  --accent-pink: #ff0099;
+  --accent-green: #00ff66;
+  --accent-warn: #ffcc00;
+  --accent-danger: #ff3333;
+
+  --border-light: #333333;
+  --border-active: #555555;
+  
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Consolas', 'Monaco', monospace;
+  
+  --header-height: 60px;
+  --sidebar-width: 250px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  font-family: var(--font-body);
+}
+
+a {
+  color: var(--accent-cyan);
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+}
+
+pre, code {
+  font-family: var(--font-mono);
+}
+
+input, button, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Utilities */
+.cyber-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 1rem;
+}
+
+.text-cyan { color: var(--accent-cyan); }
+.text-pink { color: var(--accent-pink); }
+.text-green { color: var(--accent-green); }
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-app);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 4px;
+  &:hover { background: var(--border-active); }
+}
