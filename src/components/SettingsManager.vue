@@ -227,33 +227,6 @@ const addCommand = () => {
 const removeCommand = (idx: number) => {
     config.value.customCommands.splice(idx, 1);
 };
-    try {
-        const res = await fetch('/api/settings', {
-            method: 'POST',
-            body: JSON.stringify({ action: 'get_config' })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-            // If we got data, we are connected
-            if (!isConnected.value) {
-                // We need to import setConnected if not available, or use the one from destructuring
-                // Wait, need to check destructuring above.
-            }
-            hasMasterPass.value = data.hasMasterPass;
-            // Also load ssh key if authorized? No, need master pass for that usually? 
-            // Actually ssh key view is protected by auth gate? 
-            // The Auth Gate protects the "Settings Content".
-            // So we just need hasMasterPass to show the login screen.
-            
-            // We can implicitly set connected here.
-            // But I need access to setConnected.
-        }
-    } catch (e) {
-        // Really offline or error
-        console.error('Connection check failed', e);
-    }
-
 
 
 onMounted(() => {
