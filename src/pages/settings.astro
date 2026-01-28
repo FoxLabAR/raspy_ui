@@ -1,0 +1,16 @@
+---
+import Layout from "../layouts/Layout.astro";
+import SettingsManager from "../components/SettingsManager.vue";
+---
+
+<Layout title="Settings">
+    <div class="settings-container">
+        <SettingsManager client:load />
+    </div>
+</Layout>
+
+<style>
+    .settings-container {
+        height: calc(100vh - 120px);
+    }
+</style>
