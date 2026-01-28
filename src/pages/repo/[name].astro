@@ -1,0 +1,10 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import RepoDetails from "../../components/RepoDetails.vue";
+
+const { name } = Astro.params;
+---
+
+<Layout title={`Repo: ${name}`}>
+    <RepoDetails repoName={name as string} client:load />
+</Layout>
