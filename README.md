@@ -95,3 +95,20 @@ El sistema utiliza una arquitectura híbrida moderna:
 
 ---
 *Copyright (c) 2026 FoxLab. Distribuido bajo la licencia MIT.*
+
+*Documentación generada automáticamente por Antigravity AI Agent.*
+
+│   ├── components/   # Componentes Vue (FileManager, ServiceManager, RepoManager)
+│   ├── layouts/      # Layouts principales de Astro
+│   ├── lib/          # Utilidades compartidas (SSH, Stores)
+│   ├── pages/        # Rutas y API Endpoints
+│   │   └── api/      # Backend for Frontend (System Exec, FS, Git)
+│   └── styles/       # Estilos globales (SCSS)
+├── astro.config.mjs  # Configuración de Astro
+└── package.json      # Dependencias y scripts
+```
+
+---
+*Copyright (c) 2026 FoxLab. Distribuido bajo la licencia MIT.*
+
+
