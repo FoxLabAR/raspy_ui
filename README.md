@@ -175,4 +175,3 @@ El sistema utiliza una arquitectura híbrida moderna:
 ```
 ---
 *Copyright (c) 2026 FoxLab. Distribuido bajo la licencia MIT.*
-# Astro Starter Kit: Minimal
