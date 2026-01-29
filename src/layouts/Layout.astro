@@ -1,6 +1,5 @@
 ---
 import "../styles/global.scss";
-import "remixicon/fonts/remixicon.css";
 import GlobalTerminal from "../components/GlobalTerminal.vue";
 
 import ConnectionStatus from "../components/ConnectionStatus.vue";
@@ -37,19 +36,19 @@ const { title } = Astro.props;
                 </div>
                 <nav class="main-nav">
                     <a href="/" class="nav-item">
-                        <i class="ri-dashboard-line icon"></i> DASHBOARD
+                        <span class="icon">⊞</span> DASHBOARD
                     </a>
                     <a href="/repos" class="nav-item">
-                        <i class="ri-git-repository-line icon"></i> REPOSITORIES
+                        <span class="icon">⑆</span> REPOSITORIES
                     </a>
                     <a href="/files" class="nav-item">
-                        <i class="ri-folder-line icon"></i> FILES
+                        <span class="icon">📂</span> FILES
                     </a>
                     <a href="/services" class="nav-item">
-                        <i class="ri-server-line icon"></i> SERVICES
+                        <span class="icon">⚙</span> SERVICES
                     </a>
                     <a href="/settings" class="nav-item bottom">
-                        <i class="ri-settings-4-line icon"></i> SETTINGS
+                        <span class="icon">⚯</span> SETTINGS
                     </a>
                 </nav>
             </aside>
