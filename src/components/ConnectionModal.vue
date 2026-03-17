@@ -15,7 +15,34 @@ const form = ref({
 const loading = ref(false);
 const error = ref('');
 
-onMounted(() => {
+onMounted(async () => {
+    // Try to load from API first (server-side config), fall back to localStorage
+    try {
+        const res = await fetch('/api/settings', {
+            method: 'POST',
+            body: JSON.stringify({ action: 'get_config' })
+        });
+        const data = await res.json();
+        
+        if (data.success && data.config?.defaultConnection) {
+            const def = data.config.defaultConnection;
+            if (def.host) form.value.host = def.host;
+            if (def.username) form.value.username = def.username;
+            if (def.authType) form.value.authType = def.authType;
+            // Map keyPath to keyName for display if it matches a name-like pattern or just use it
+            // The modal uses 'keyName' for display and hidden input
+            if (def.keyPath) form.value.keyName = def.keyPath; 
+        } else {
+            // Fallback to local storage if no server config
+            loadFromLocal();
+        }
+    } catch (e) {
+        console.warn('Failed to load settings', e);
+        loadFromLocal();
+    }
+});
+
+const loadFromLocal = () => {
     const savedHost = localStorage.getItem('raspi_host');
     const savedUser = localStorage.getItem('raspi_user');
     const savedAuth = localStorage.getItem('raspi_auth_type');
@@ -25,7 +52,7 @@ onMounted(() => {
     if (savedUser) form.value.username = savedUser;
     if (savedAuth) form.value.authType = savedAuth;
     if (savedKey) form.value.keyName = savedKey;
-});
+};
 
 const connect = async () => {
     loading.value = true;

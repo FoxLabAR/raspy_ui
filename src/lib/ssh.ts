@@ -39,6 +39,14 @@ export const connectToHost = (config: any) => {
     });
 };
 
+export const closeConnection = () => {
+    if (sshClient) {
+        sshClient.end();
+        sshClient = null;
+        console.log('SSH Connection Closed by User');
+    }
+};
+
 export const executeCommand = (command: string): Promise<{ stdout: string, stderr: string, code: number }> => {
     return new Promise((resolve, reject) => {
         if (!sshClient) {

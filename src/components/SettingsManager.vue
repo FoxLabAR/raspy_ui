@@ -37,13 +37,84 @@ const loading = ref(false);
 const config = ref({
     repoPath: '/opt/git',
     connectionTimeout: 20000,
-    customCommands: [] as { name: string, cmd: string }[]
+    customCommands: [] as { name: string, cmd: string }[],
+    defaultConnection: {
+        host: '',
+        username: 'dietpi',
+        port: 22,
+        authType: 'password', // 'key' | 'password'
+        keyPath: '',
+        autoConnect: false
+    },
+    registeredKeys: [] as { name: string, path: string }[]
 });
 
 const sshKey = ref('');
 const hasMasterPass = ref(false);
+const loadingKeys = ref(false);
+const smartKeys = ref<any[]>([]);
+const newExternalKey = ref({ name: '', path: '' });
+const registeringKey = ref(false);
+const creatingKey = ref(false);
 
-// Unlocking
+const autoKeyName = ref('raspi_key');
+const showKeyModal = ref(false);
+const newKeyName = ref('');
+
+// --- DATA FETCHING ---
+
+const loadSettings = async () => {
+    const res = await fetch('/api/settings', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'get_config' })
+    });
+    const data = await res.json();
+    if (data.success) {
+        config.value = { 
+            ...config.value, 
+            ...data.config,
+            defaultConnection: { ...config.value.defaultConnection, ...(data.config?.defaultConnection || {}) },
+            registeredKeys: data.config?.registeredKeys || [] 
+        };
+        hasMasterPass.value = data.hasMasterPass;
+    }
+};
+
+const saveSettings = async () => {
+    loading.value = true;
+    try {
+        await fetch('/api/settings', {
+            method: 'POST',
+            body: JSON.stringify({ action: 'save_config', config: config.value })
+        });
+        alert('SETTINGS_SAVED');
+    } catch (e) {
+        alert('SAVE_FAILED');
+    } finally {
+        loading.value = false;
+    }
+};
+
+const fetchKeys = async () => {
+    loadingKeys.value = true;
+    try {
+        const res = await fetch('/api/security/ssh_setup', {
+            method: 'POST',
+            body: JSON.stringify({ action: 'list_keys' })
+        });
+        const data = await res.json();
+        if (data.keys) {
+            smartKeys.value = data.keys;
+        }
+    } catch (e) {
+        console.error('Failed to fetch keys', e);
+    } finally {
+        loadingKeys.value = false;
+    }
+};
+
+// --- AUTH ---
+
 const unlock = async () => {
     loading.value = true;
     error.value = '';
@@ -55,7 +126,8 @@ const unlock = async () => {
         const data = await res.json();
         if (data.success) {
             login();
-            loadSettings();
+            await loadSettings();
+            await fetchKeys(); // Ensure keys are loaded for the selector
         } else {
             error.value = 'INVALID_PASSWORD';
         }
@@ -86,88 +158,45 @@ const setupMaster = async () => {
     }
 };
 
-const loadSettings = async () => {
-    const res = await fetch('/api/settings', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'get_config' })
-    });
-    const data = await res.json();
-    if (data.success) {
-        config.value = { ...config.value, ...data.config };
-        hasMasterPass.value = data.hasMasterPass;
-    }
-};
+// --- KEY MANAGEMENT ---
 
-const saveSettings = async () => {
-    loading.value = true;
+const registerExternalKey = async () => {
+    if (!newExternalKey.value.name || !newExternalKey.value.path) return;
+    registeringKey.value = true;
     try {
-        await fetch('/api/settings', {
+        const res = await fetch('/api/settings', {
             method: 'POST',
-            body: JSON.stringify({ action: 'save_config', config: config.value })
-        });
-        alert('SETTINGS_SAVED');
-    } catch (e) {
-        alert('SAVE_FAILED');
-    } finally {
-        loading.value = false;
-    }
-};
-
-const loadSSH = async () => {
-    const res = await fetch('/api/settings', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'get_ssh_key' })
-    });
-    const data = await res.json();
-    if (data.success) {
-        sshKey.value = data.key;
-    }
-};
-
-const genSSH = async () => {
-    const res = await fetch('/api/settings', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'gen_ssh_key' })
-    });
-    const data = await res.json();
-    if (data.success) {
-        sshKey.value = data.key;
-    }
-};
-
-const autoKeyName = ref('raspi_key');
-const loadingSetup = ref(false);
-const showKeyModal = ref(false);
-const newKeyName = ref('');
-const loadingKeys = ref(false);
-const creatingKey = ref(false);
-const smartKeys = ref<any[]>([]);
-
-const fetchKeys = async () => {
-    loadingKeys.value = true;
-    try {
-        const res = await fetch('/api/security/ssh_setup', {
-            method: 'POST',
-            body: JSON.stringify({ action: 'list_keys' })
+            body: JSON.stringify({ action: 'verify_key_path', path: newExternalKey.value.path })
         });
         const data = await res.json();
-        if (data.keys) {
-            smartKeys.value = data.keys;
+        
+        if (data.success) {
+            if (!config.value.registeredKeys) config.value.registeredKeys = [];
+            config.value.registeredKeys.push({
+                name: newExternalKey.value.name,
+                path: data.verifiedPath 
+            });
+            newExternalKey.value = { name: '', path: '' };
+            await saveSettings();
+        } else {
+            alert('INVALID_PATH: ' + data.error);
         }
-    } catch (e) {
-        console.error('Failed to fetch keys', e);
+    } catch (e: any) {
+        alert('ERROR: ' + e.message);
     } finally {
-        loadingKeys.value = false;
+        registeringKey.value = false;
     }
+};
+
+const removeExternalKey = async (idx: number) => {
+    config.value.registeredKeys.splice(idx, 1);
+    await saveSettings();
 };
 
 const createSmartKey = async () => {
     if (!newKeyName.value) return;
-    
-    // We need host and user to update config efficiently
     const host = localStorage.getItem('raspi_host') || prompt('Target IP (HostName)?');
     const user = localStorage.getItem('raspi_user') || 'dietpi';
-    
     if (!host) return;
 
     creatingKey.value = true;
@@ -198,7 +227,6 @@ const createSmartKey = async () => {
 
 const deprecateKey = async (name: string) => {
     if (!confirm(`REVOKE access for key '${name}'? This will delete local files.`)) return;
-    
     try {
         const res = await fetch('/api/security/ssh_setup', {
             method: 'POST',
@@ -210,15 +238,33 @@ const deprecateKey = async (name: string) => {
     }
 };
 
-// Initial load
+// --- OTHERS ---
+
+const loadSSH = async () => {
+    const res = await fetch('/api/settings', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'get_ssh_key' })
+    });
+    const data = await res.json();
+    if (data.success) {
+        sshKey.value = data.key;
+    }
+};
+
+const genSSH = async () => {
+    const res = await fetch('/api/settings', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'gen_ssh_key' })
+    });
+    const data = await res.json();
+    if (data.success) {
+        sshKey.value = data.key;
+    }
+};
+
 watch(activeTab, (val) => {
     if (val === 'ssh') fetchKeys();
 });
-
-const runAutoSetup = async () => {
-    // Deprecated by new UI but keeping if needed or redirecting
-    showKeyModal.value = true;
-};
 
 const addCommand = () => {
     config.value.customCommands.push({ name: 'NEW_CMD', cmd: 'echo "hello"' });
@@ -227,34 +273,6 @@ const addCommand = () => {
 const removeCommand = (idx: number) => {
     config.value.customCommands.splice(idx, 1);
 };
-    try {
-        const res = await fetch('/api/settings', {
-            method: 'POST',
-            body: JSON.stringify({ action: 'get_config' })
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-            // If we got data, we are connected
-            if (!isConnected.value) {
-                // We need to import setConnected if not available, or use the one from destructuring
-                // Wait, need to check destructuring above.
-            }
-            hasMasterPass.value = data.hasMasterPass;
-            // Also load ssh key if authorized? No, need master pass for that usually? 
-            // Actually ssh key view is protected by auth gate? 
-            // The Auth Gate protects the "Settings Content".
-            // So we just need hasMasterPass to show the login screen.
-            
-            // We can implicitly set connected here.
-            // But I need access to setConnected.
-        }
-    } catch (e) {
-        // Really offline or error
-        console.error('Connection check failed', e);
-    }
-
-
 
 onMounted(() => {
     if (isConnected.value) checkStatus();
@@ -306,6 +324,57 @@ onMounted(() => {
                       <label>CONNECTION_TIMEOUT (ms)</label>
                       <input type="number" v-model="config.connectionTimeout" />
                   </div>
+
+                  <div class="divider"></div>
+
+                  <h2>DEFAULT_CONNECTION</h2>
+                  <p class="desc-text-sm">Configure credentials for auto-connection on startup.</p>
+
+                  <div class="form-row">
+                      <div class="form-group flex-1">
+                          <label>HOST_IP</label>
+                          <input v-model="config.defaultConnection.host" placeholder="192.168.0.x" />
+                      </div>
+                      <div class="form-group w-100">
+                          <label>USER</label>
+                          <input v-model="config.defaultConnection.username" placeholder="dietpi" />
+                      </div>
+                  </div>
+
+                  <div class="form-group">
+                       <label>AUTHENTICATION_METHOD</label>
+                       <div class="radio-group">
+                           <label :class="{ active: config.defaultConnection.authType === 'password' }">
+                               <input type="radio" v-model="config.defaultConnection.authType" value="password"> PASSWORD
+                           </label>
+                           <label :class="{ active: config.defaultConnection.authType === 'key' }">
+                               <input type="radio" v-model="config.defaultConnection.authType" value="key"> SSH KEY
+                           </label>
+                       </div>
+                  </div>
+
+                  <div class="form-group" v-if="config.defaultConnection.authType === 'key'">
+                       <label>SELECT_KEY</label>
+                       <select v-model="config.defaultConnection.keyPath">
+                           <option value="" disabled>-- SELECT REGISTERED KEY --</option>
+                           <!-- Smart Keys -->
+                           <optgroup label="Managed Keys">
+                               <option v-for="k in smartKeys" :value="k.name">{{ k.name }} (Managed)</option>
+                           </optgroup>
+                           <!-- External Keys -->
+                           <optgroup label="External Keys">
+                               <option v-for="k in (config.registeredKeys || [])" :value="k.path">{{ k.name }}</option>
+                           </optgroup>
+                       </select>
+                  </div>
+
+                  <div class="form-group checkboxes">
+                      <label class="checkbox-label">
+                          <input type="checkbox" v-model="config.defaultConnection.autoConnect" />
+                          <span class="checkmark"></span>
+                          AUTO_CONNECT_ON_STARTUP
+                      </label>
+                  </div>
                   
                   <div class="actions">
                       <button class="btn-primary" @click="saveSettings">SAVE_CHANGES</button>
@@ -313,36 +382,72 @@ onMounted(() => {
               </div>
               
               <div v-if="activeTab === 'ssh'" class="panel-content">
-                   <h2>SMART_KEY_MANAGEMENT</h2>
+                   <h2>KEY_MANAGEMENT</h2>
                    
-                   <p class="desc-text">Manage dedicated SSH identities for password-less access. Keys are automatically synced to your local SSH config.</p>
-                   
-                   <div class="keys-list">
-                       <div v-if="loadingKeys" class="loading">SCANNING_CREDENTIALS...</div>
-                       <div v-else-if="smartKeys.length === 0" class="empty">NO_SMART_KEYS_FOUND</div>
+                   <!-- Registered External Keys -->
+                   <div class="section-block">
+                       <h3>REGISTERED_KEYS (EXTERNAL)</h3>
+                       <p class="desc-text">Link to existing private keys on your local system (e.g. ~/.ssh/id_rsa). These are not deleted when removed from this list.</p>
                        
-                       <div v-else v-for="key in smartKeys" :key="key.name" class="key-item cyber-card">
-                           <div class="key-info">
-                               <span class="icon">🔑</span>
-                               <div class="details">
-                                   <span class="name">{{ key.name }}</span>
-                                   <span class="path">{{ key.path }}</span>
+                       <div class="keys-list small">
+                           <div v-if="!config.registeredKeys || config.registeredKeys.length === 0" class="empty">NO_EXTERNAL_KEYS_LINKED</div>
+                           <div v-else v-for="(key, idx) in config.registeredKeys" :key="idx" class="key-item cyber-card">
+                               <div class="key-info">
+                                   <span class="icon">🔗</span>
+                                   <div class="details">
+                                       <span class="name">{{ key.name }}</span>
+                                       <span class="path" :title="key.path">{{ key.path }}</span>
+                                   </div>
                                </div>
+                               <button class="btn-danger icon-only" @click="removeExternalKey(idx)">×</button>
                            </div>
-                           <div class="key-status">
-                               <span class="badge" :class="key.isConfigured ? 'active' : 'warn'">
-                                   {{ key.isConfigured ? 'CONFIGURED' : 'UNLINKED' }}
-                               </span>
+                       </div>
+
+                       <div class="add-key-form cyber-card">
+                           <div class="form-row">
+                               <input v-model="newExternalKey.name" placeholder="Name (e.g. Main PC)" class="small-input" />
+                               <input v-model="newExternalKey.path" placeholder="Absolute Path (e.g. C:\Users\User\.ssh\id_rsa)" class="flex-1" />
+                               <button class="btn-secondary" @click="registerExternalKey" :disabled="registeringKey">
+                                   {{ registeringKey ? '...' : 'LINK' }}
+                               </button>
                            </div>
-                           <button class="btn-danger icon-only" title="DEPRECATE" @click="deprecateKey(key.name)">×</button>
                        </div>
                    </div>
 
-                   <div class="actions">
-                       <button class="btn-primary" @click="showKeyModal = true">
-                           <span class="plus">+</span> NEW_SMART_KEY
-                       </button>
-                       <button class="btn-secondary" @click="fetchKeys">REFRESH</button>
+                   <div class="divider"></div>
+
+                   <!-- Smart Keys -->
+                   <div class="section-block">
+                        <h3>SMART_KEYS (MANAGED)</h3>
+                        <p class="desc-text">Keys generated and managed by this application. Deleting them will remove the files.</p>
+                        
+                        <div class="keys-list">
+                            <div v-if="loadingKeys" class="loading">SCANNING_CREDENTIALS...</div>
+                            <div v-else-if="smartKeys.length === 0" class="empty">NO_MANAGED_KEYS_FOUND</div>
+                            
+                            <div v-else v-for="key in smartKeys" :key="key.name" class="key-item cyber-card">
+                                <div class="key-info">
+                                    <span class="icon">🔑</span>
+                                    <div class="details">
+                                        <span class="name">{{ key.name }}</span>
+                                        <span class="path">{{ key.path }}</span>
+                                    </div>
+                                </div>
+                                <div class="key-status">
+                                    <span class="badge" :class="key.isConfigured ? 'active' : 'warn'">
+                                        {{ key.isConfigured ? 'CONFIGURED' : 'UNLINKED' }}
+                                    </span>
+                                </div>
+                                <button class="btn-danger icon-only" title="DEPRECATE" @click="deprecateKey(key.name)">×</button>
+                            </div>
+                        </div>
+
+                        <div class="actions">
+                            <button class="btn-primary" @click="showKeyModal = true">
+                                <span class="plus">+</span> NEW_SMART_KEY
+                            </button>
+                            <button class="btn-secondary" @click="fetchKeys">REFRESH</button>
+                        </div>
                    </div>
               </div>
               
@@ -595,4 +700,45 @@ onMounted(() => {
 }
 
 .mt-4 { margin-top: 2rem; }
+
+.divider { height: 1px; background: var(--border-light); margin: 2rem 0; width: 100%; }
+.desc-text-sm { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem; }
+.form-row { display: flex; gap: 1rem; align-items: flex-end; width: 100%; }
+.flex-1 { flex: 1; }
+.w-100 { width: 100px; } /* Small width override for user or port */
+.section-block { margin-bottom: 2rem; }
+
+.radio-group {
+    display: flex; gap: 1rem;
+    label {
+        background: rgba(0,0,0,0.3); border: 1px solid var(--border-light); padding: 0.5rem 1rem; cursor: pointer; color: var(--text-muted); font-size: 0.8rem;
+        &.active { border-color: var(--accent-cyan); color: var(--accent-cyan); background: rgba(0, 243, 255, 0.05); }
+        input { display: none; }
+    }
+}
+
+.checkboxes {
+    .checkbox-label {
+        display: flex; align-items: center; cursor: pointer; font-size: 0.9rem; color: var(--text-main);
+        input { display: none; }
+        .checkmark {
+            width: 16px; height: 16px; border: 1px solid var(--border-light); margin-right: 0.5rem; display: inline-block; position: relative;
+        }
+        input:checked + .checkmark {
+            background: var(--accent-cyan); border-color: var(--accent-cyan);
+        }
+    }
+}
+
+.add-key-form {
+    padding: 1rem; margin-top: 1rem; border: 1px dashed var(--border-light);
+    .small-input { width: 150px; padding: 0.5rem; background: rgba(0,0,0,0.5); border: 1px solid var(--border-light); color: white; margin-right: 0.5rem; }
+    .btn-secondary { padding: 0.5rem 1rem; cursor: pointer; border: 1px solid var(--border-light); background: transparent; color: white; }
+    input { padding: 0.5rem; background: rgba(0,0,0,0.5); border: 1px solid var(--border-light); color: white; &:focus { border-color: var(--accent-cyan); outline: none; } }
+}
+
+select {
+   width: 100%; padding: 0.8rem; background: #000; border: 1px solid var(--border-light); color: white; font-family: var(--font-mono);
+   &:focus { border-color: var(--accent-cyan); outline: none; }
+}
 </style>
